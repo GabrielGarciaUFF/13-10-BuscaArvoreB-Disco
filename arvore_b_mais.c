@@ -57,8 +57,57 @@ void imprime_arquivos() {
  */
 int busca(int chave, char *nome_arquivo_metadados, char *nome_arquivo_indice, char *nome_arquivo_dados)
 {
-	//TODO: Implementar essa função
-	return -1;
+    TMetadados *meta = le_arq_metadados(nome_arquivo_metadados);
+    if (meta == NULL) {
+        return -1;
+    }
+
+    int d = meta->d;
+    int pont_atual = meta->pont_raiz;
+    int eh_folha = meta->raiz_folha;
+    free(meta);
+
+    FILE *arq_i = fopen(nome_arquivo_indice, "rb");
+    FILE *arq_d = fopen(nome_arquivo_dados, "rb");
+
+    while (!eh_folha) {
+        fseek(arq_i, pont_atual, SEEK_SET);
+        TNoInterno *no = le_no_interno(d, arq_i);
+        if (no == NULL) {
+            break;
+        }
+
+        imprime_no_interno(d, no);
+        eh_folha = no->aponta_folha;
+
+        int prox_pont = no->p[no->m];
+        for (int i = 0; i < no->m; i++) {
+            if (chave < no->chaves[i]) {
+                prox_pont = no->p[i];
+                break;
+            } else if (chave == no->chaves[i]) {
+                prox_pont = no->p[i + 1];
+                break;
+            }
+        }
+
+        pont_atual = prox_pont;
+        libera_no_interno(no);
+    }
+
+    if (pont_atual != -1 && arq_d != NULL) {
+        fseek(arq_d, pont_atual, SEEK_SET);
+        TNoFolha *folha = le_no_folha(d, arq_d);
+        if (folha != NULL) {
+            imprime_no_folha(d, folha);
+            libera_no_folha(d, folha);
+        }
+    }
+
+    if (arq_i != NULL) fclose(arq_i);
+    if (arq_d != NULL) fclose(arq_d);
+
+    return pont_atual;
 }
 
 int main () {
